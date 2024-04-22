@@ -43,6 +43,8 @@ def supervised_learning(df, target_column="Price"):
 
 
 
+
+
 def calculate_baseline(df, target_column, scoring):
     # Per vedere se la loss del modello è migliore di quella che si potrebbe ottenere con una predizione banale, come media o mediana
     if scoring == "neg_root_mean_squared_error":
