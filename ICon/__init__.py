@@ -52,6 +52,8 @@ def supervised_learning(df, target_column="Price"):
 
     # Perform 5-fold cross-validation, repeated 3 times, and print the average score
     cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
+    # TODO fonty per la grid search fa solo cv=5 che come se fosse n_repeats=1
+
     # Scelte tre metriche di scoring, ma prima e terza simili, todo non so se equivalgono
     scorings = ['neg_root_mean_squared_error', 'neg_mean_absolute_error', 'neg_mean_squared_error']
 
