@@ -5,9 +5,9 @@ from sklearnex import patch_sklearn
 
 patch_sklearn()
 
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
 
 # Read the CSV file
 original_df = pd.read_csv(pathlib.Path(__file__).parent.parent / 'used_cars.csv')
@@ -16,67 +16,76 @@ original_df = pd.read_csv(pathlib.Path(__file__).parent.parent / 'used_cars.csv'
 def supervised_learning(df, target_column="Price"):
     # Prendere le colonne categoriche e trasformarle in colonne numeriche facendo il one-hot encoding
     # In python gli alberi di decisione non supportano feature categoriche
-    df_encoded = preprocessing(df)
+    preprocessed_df = preprocessing(df)
 
-    X = df_encoded.drop(target_column, axis=1)
-    y = df_encoded[target_column]
+    print(preprocessed_df)
 
-    results = {"decision_tree": {"scores": None, "params": None},
+    X = preprocessed_df.drop(target_column, axis=1)
+    y = preprocessed_df[target_column]
+
+    # Scelte tre metriche di scoring, ma prima e terza simili, todo non so se equivalgono
+    scorings = ['neg_root_mean_squared_error', 'neg_mean_absolute_error', 'neg_mean_squared_error']
+
+    results = {s: {"decision_tree": {"scores": None, "params": None},
                "random_forest": {"scores": None, "params": None},
-               "gradient_boosted_trees": {"scores": None, "params": None}}
+               "gradient_boosted_trees": {"scores": None, "params": None}} for s in scorings }
 
-    dtc_param_grid = {
-        'criterion': ['gini', 'entropy', 'log_loss'],
+    dtr_param_grid = {
+        'criterion': ["squared_error", "friedman_mse", "absolute_error", "poisson"],
         'splitter': ['best'],
-        'max_depth': [None, 5, 10, 15, 20],
-        'min_samples_split': [2, 5, 10],
-        'min_samples_leaf': [1, 2, 5],
-        'max_features': ['auto', 'sqrt', 'log2', None],
-        'min_weight_fraction_leaf': [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-        'min_impurity_decrease': [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-    }
-
-    rfc_param_grid = {
-        'n_estimators': [100, 200, 300],
-        'max_depth': [None, 5, 10, 15, 20],
-        'min_samples_split': [2, 5, 10],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5, 10, 20],
         'min_samples_leaf': [1, 2, 5],
     }
 
-    gbt_param_grid = {
-        'n_estimators': [100, 200, 300],
-        'max_depth': [3, 5, 10],
-        'min_samples_split': [2, 5, 10],
+    rfr_param_grid = {
+        'n_estimators': [100, 200],
+        'criterion': ["squared_error", "friedman_mse", "poisson"],  # "absolute_error" è troppo lento
+        'max_depth': [None, 5, 10],
+        'min_samples_split': [2, 5, 10, 20],
+        'min_samples_leaf': [1, 2, 5],
+    }
+
+    # Best params: {'criterion': 'poisson', 'max_depth': None, 'min_samples_leaf': 5, 'min_samples_split': 2, 'n_estimators': 200}
+
+    gbr_param_grid = {
+        'n_estimators': [100, 200],
+        'loss': ['squared_error', 'absolute_error', 'huber', 'quantile'],
+        'learning_rate': [0.01, 0.1, 0.5],
+        'criterion': ['friedman_mse', 'squared_error'],
+        'max_depth': [None, 5, 10],
+        'min_samples_split': [2, 5, 10, 20],
         'min_samples_leaf': [1, 2, 5],
     }
 
     # Perform 5-fold cross-validation, repeated 3 times, and print the average score
-    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
+    cv = RepeatedKFold(n_splits=5, n_repeats=1, random_state=42)
     # TODO fonty per la grid search fa solo cv=5 che come se fosse n_repeats=1
-
-    # Scelte tre metriche di scoring, ma prima e terza simili, todo non so se equivalgono
-    scorings = ['neg_root_mean_squared_error', 'neg_mean_absolute_error', 'neg_mean_squared_error']
 
     # Addestrare ogni modello per ogni metrica di scoring
     for scoring in scorings:
         baseline_score = calculate_baseline_score(df, target_column, scoring)
         print(f"Baseline for scoring metric {scoring}: ", baseline_score)
 
-        dtc = DecisionTreeClassifier(random_state=42)
+        dtc = DecisionTreeRegressor(random_state=42)
         print(f"Training decision tree with scoring metric {scoring}")
-        results["decision_tree"] = train_model(dtc, dtc_param_grid, X, y, cv, scoring)
+        results[scoring]["decision_tree"] = train_model(dtc, dtr_param_grid, X, y, cv, scoring)
 
-        rfc = RandomForestClassifier(random_state=42)
+        rfc = RandomForestRegressor(random_state=42)
         print(f"Training random forest with scoring metric {scoring}")
-        results["random_forest"] = train_model(rfc, rfc_param_grid, X, y, cv, scoring)
+        results[scoring]["random_forest"] = train_model(rfc, rfr_param_grid, X, y, cv, scoring)
 
-        gbt = GradientBoostingClassifier(random_state=42)
-        print(f"Training gradient boosted trees with scoring metric {scoring}")
-        results["gradient_boosted_trees"] = train_model(gbt, gbt_param_grid, X, y, cv, scoring)
+        gbt = GradientBoostingRegressor(random_state=42)
+        print(f"Training gradient boosted model with scoring metric {scoring}")
+        results[scoring]["gradient_boosted_trees"] = train_model(gbt, gbr_param_grid, X, y, cv, scoring)
+
+    # TODO fare il plot dei risultati
+
+
 
 
 def train_model(model, param_grid, X, y, cv, scoring):
-    grid_search = GridSearchCV(model, param_grid, cv=cv, scoring=scoring)
+    grid_search = GridSearchCV(model, param_grid, cv=cv, scoring=scoring, n_jobs=-1, verbose=2)
     grid_search.fit(X, y)
 
     # scores = cross_val_score(ctf, X, y, cv=cv, scoring=scoring)
@@ -112,6 +121,7 @@ def calculate_baseline_score(df, target_column, scoring):
 
 
 def preprocessing(df):
+    df = df.copy()
     # Per non avere valori nulli nella colonna Service History
     df['Service history'] = df['Service history'].fillna("Unavailable")
     df['Service history'] = df['Service history'].map({'Full': True, 'Unavailable': False})
@@ -130,8 +140,12 @@ def preprocessing(df):
 
     df['Emission Class'] = pd.to_numeric(df['Emission Class'].str.replace('Euro ', ''), errors='coerce')
 
-    df_encoded = pd.get_dummies(df, columns=['Fuel type', 'Body type'])
-    return df_encoded
+    df = pd.get_dummies(df, columns=['Fuel type', 'Body type'])
+
+    # Algoritmi necessitano di valori non nulli
+    df = df.dropna()
+
+    return df
 
 
 if __name__ == "__main__":
