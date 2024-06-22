@@ -1,6 +1,6 @@
 
-predict(Features, Prediction) :-
-    traverse_tree(0, Features, Prediction).
+predirre_prezzo(Features, Prezzo) :-
+    traverse_tree(0, Features, Prezzo).
 
 % Passo base
 traverse_tree(NodeID, _, Prediction) :-
