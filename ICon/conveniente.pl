@@ -20,13 +20,13 @@ predirre_prezzo(Features, Prezzo) :-
 
 
 % Predicato per calcolare gli incrementi basati sulle caratteristiche
-calcolare_incremento([], PrezzoParziale, PrezzoParziale).
-
 calcolare_incremento([Feature|AltreFeature], PrezzoParziale, Prezzo) :-
     length(AltreFeature, Indice),
     incremento_feature(Indice, Feature, Incremento),
     NuovoPrezzoParziale is PrezzoParziale + Incremento,
     calcolare_incremento(AltreFeature, NuovoPrezzoParziale, Prezzo).
+
+calcolare_incremento([], PrezzoParziale, PrezzoParziale).
 
 
 % vehicleType,yearOfRegistration,gearboxAutomatic,powerHP,kilometer,fuelTypeDiesel,brand,notRepairedDamage
@@ -75,7 +75,3 @@ incremento_feature(6, mazda, 8000).
 % notRepairedDamage
 incremento_feature(7, false, 1000).
 incremento_feature(7, true, -2500).
-
-% Esempio di uso
-% Caratteristiche: vehicleType = suv, yearOfRegistration = 2020, gearboxAutomatic = yes, powerHP = 150, kilometer = 30000, fuelTypeDiesel = no, brand = bmw, notRepairedDamage = no
-?- predirre_prezzo([vehicleType-suv, yearOfRegistration-2020, gearboxAutomatic-yes, powerHP-150, kilometer-30000, fuelTypeDiesel-no, brand-bmw, notRepairedDamage-no], Prezzo).
