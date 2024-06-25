@@ -35,7 +35,7 @@ incremento_feature(0, bus, 5000).
 incremento_feature(0, cabrio, 4000).
 incremento_feature(0, citycar, 3500).
 incremento_feature(0, coupe, 4500).
-incremento_feature(0, limousine, 7000).
+incremento_feature(0, sedan, 7000).
 incremento_feature(0, stationwagon, 6000).
 
 % yearOfRegistration
